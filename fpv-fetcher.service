@@ -1,0 +1,19 @@
+[Unit]
+Description=FPV Video Fetcher (定时视频抓取)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+# 直接以 root 运行（专用 VPS，简化部署）
+WorkingDirectory=/opt/fpv-fetcher
+# 守护进程模式：每 6 小时跑一次。改 cron 即改频率。-u 关闭 stdout 缓冲，日志实时可查。
+ExecStart=/opt/fpv-fetcher/.venv/bin/python -u scheduler.py -c /opt/fpv-fetcher/config.json --cron "0 */6 * * *"
+Restart=on-failure
+RestartSec=10
+# 日志输出到 journalctl，用 journalctl -u fpv-fetcher -f 查看
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

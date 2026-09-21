@@ -1,0 +1,32 @@
+{
+  "//": "fpv-fetcher 配置文件。部署到服务器后改这里的路径即可。",
+
+  "//download_root": "下载根目录：其下按 分类/日期/视频 三级组织",
+  "download_root": "/data/videos",
+
+  "//categories": "要定时抓取的分类。name=子目录名，url=分类页地址（实测结构 /categories/{slug}/），pages=每次扫几页",
+  "categories": [
+    { "name": "amateur", "url": "https://www.freepornvideos.xxx/categories/amateur/", "pages": 2 },
+    { "name": "solo",    "url": "https://www.freepornvideos.xxx/categories/solo/",    "pages": 1 }
+  ],
+
+  "//resolution": "highest=最高清(实测站点最高到 2160p/4K，单个视频可达数GB)；720=清晰且省盘(约1GB/个)。磁盘紧张时建议 720",
+  "resolution": "720",
+
+  "//cookie": "若站点需要登录才下载，把浏览器 Cookie 整行粘进来；游客可下载则留空",
+  "cookie": "",
+
+  "//proxy": "出口 IP 被 Cloudflare 拦截时填住宅代理：http://user:pass@host:port；直连可用则留空",
+  "proxy": "",
+
+  "//schedule_cron": "定时表达式：0 */6 * * * =每6小时跑一次。--cron 覆盖此项",
+  "schedule_cron": "0 */6 * * *",
+
+  "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+
+  "history_file": "/data/videos/.history.json",
+
+  "request_timeout": 30.0,
+  "download_timeout": 600.0,
+  "max_retries": 3
+}

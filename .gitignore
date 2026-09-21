@@ -1,0 +1,21 @@
+# Python
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.Python
+
+# Runtime / downloads (videos live under /data/videos)
+*.part
+*.mp4
+*.mkv
+*.webm
+.history.json
+
+# Local overrides
+config.local.json
+
+# OS
+.DS_Store
