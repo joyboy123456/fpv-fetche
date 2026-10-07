@@ -1,4 +1,4 @@
-httpx[http2]>=0.27
+httpx[http2,socks]>=0.27
 croniter>=2.0
 flask>=3.0
 fastapi>=0.115
