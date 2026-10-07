@@ -26,6 +26,29 @@
 
   "history_file": "/data/videos/.history.json",
 
+  "//uploaded_file": "已成功上传到 pCloud 的本地相对路径清单（用于防重复上传和断点补传）",
+  "uploaded_file": "/data/videos/.uploaded.json",
+
+  "//pcloud": {
+    "说明": "下载完成后自动上传到 pCloud。enabled=false 时整套云存储逻辑完全不启动",
+    "backend": "api=原生 HTTP API（需自建 App 审核拿 token）；rclone=本地 rclone 进程（免审核，rclone 自带官方凭证，推荐先用这个）",
+    "rclone 配置": "backend=rclone 时：先装 rclone，再运行 `rclone config` 新建 pcloud 类型的 remote（浏览器点一下授权），名字与 rclone_remote 一致即可",
+    "access_token 获取": "backend=api 时：https://docs.pcloud.com/ → My Apps → 创建 App → Generate Access Token（选与账号注册地对应的区）",
+    "region": "账号注册地：us=美国服务器，eu=欧洲数据中心（欧区账号必须填 eu，否则 token 无效；backend=rclone 时此项无用）",
+    "base_folder": "云端根目录，其下结构与本地一致：分类/日期/文件",
+    "delete_local_after_upload": "true=本地仅作中转、传完即删省磁盘；false=本地云端双份留存",
+    "可靠性": "上传失败的文件留在本地，下一轮运行时会自动补传"
+  },
+  "pcloud": {
+    "enabled": true,
+    "backend": "rclone",
+    "rclone_remote": "pcloud",
+    "access_token": "",
+    "region": "us",
+    "base_folder": "/fpv-videos",
+    "delete_local_after_upload": false
+  },
+
   "request_timeout": 30.0,
   "download_timeout": 600.0,
   "max_retries": 3

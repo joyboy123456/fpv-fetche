@@ -1,0 +1,22 @@
+[Unit]
+Description=FPV Video Site (pCloud 中转播放站)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/fpv-fetcher
+# 改用户名密码；端口默认 8080，建议前面套 nginx/Caddy 做 HTTPS
+Environment=FPV_CONFIG=/opt/fpv-fetcher/config.json
+Environment=FPV_WEB_USER=admin
+Environment=FPV_WEB_PASS=改成强密码
+Environment=PORT=8080
+ExecStart=/opt/fpv-fetcher/.venv/bin/python -u player.py
+Restart=on-failure
+RestartSec=10
+# 日志输出到 journalctl，用 journalctl -u fpv-site -f 查看
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

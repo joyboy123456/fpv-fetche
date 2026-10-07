@@ -1,0 +1,21 @@
+[Unit]
+Description=FPV Fetcher HTTP API (远程抓取接口)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/fpv-fetcher
+# 改成强 token；其他服务器调用时带 Authorization: Bearer <token>
+Environment=FPV_CONFIG=/opt/fpv-fetcher/config.json
+Environment=FPV_API_TOKEN=改成强token
+Environment=PORT=9090
+ExecStart=/opt/fpv-fetcher/.venv/bin/python -u api.py
+Restart=on-failure
+RestartSec=10
+# 日志：journalctl -u fpv-api -f
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

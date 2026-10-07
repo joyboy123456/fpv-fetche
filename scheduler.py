@@ -27,6 +27,10 @@ def run_once(config_path: str) -> int:
     total = 0
     try:
         print(f"=== 抓取开始 {datetime.now().strftime('%Y-%m-%d %H:%M:%S')} ===")
+        if fetcher.uploader:
+            pending = fetcher.upload_pending()
+            if pending:
+                print(f"[pCloud] 补传上轮遗留 {pending} 个文件")
         for cat in cfg.categories:
             total += fetcher.run_category(cat)
         print(f"=== 完成，本轮共下载 {total} 个视频 ===")

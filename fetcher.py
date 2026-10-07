@@ -12,15 +12,31 @@ fpv-fetcher · 核心抓取模块
 from __future__ import annotations
 
 import json
+import os
+import posixpath
 import re
 import sys
 import time
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
 from urllib.parse import urljoin, urlparse
 
 import httpx
+
+from rclone_backend import RcloneBackend
+from uploader import PCloudCfg, PCloudUploader
+
+
+def build_uploader(pc: PCloudCfg):
+    """按配置构造存储后端：api=pCloud 原生 HTTP API（需自建 App token）；
+    rclone=本地 rclone 进程（免审核，rclone 自带官方接入凭证）。
+    两者接口一致，fetcher/player 无差别调用。player.py 也复用本函数。"""
+    if pc.backend == "rclone":
+        return RcloneBackend(pc.rclone_remote, pc.base_folder)
+    if not pc.access_token:
+        raise RuntimeError("pcloud.backend=api 但 access_token 为空（或改用 backend=rclone）")
+    return PCloudUploader(pc)
 
 # ==================== 模块级正则（可能需按站点实际结构调整）====================
 # 视频页 <source src=".../get_file?...XXXm.mp4">
@@ -55,6 +71,8 @@ class Config:
         "Chrome/120.0.0.0 Safari/537.36"
     )
     history_file: Path = None  # type: ignore
+    uploaded_file: Path = None  # type: ignore  # 已上传 pCloud 的本地相对路径清单
+    pcloud: PCloudCfg = field(default_factory=PCloudCfg)
     request_timeout: float = 30.0
     download_timeout: float = 600.0
     max_retries: int = 3
@@ -64,15 +82,20 @@ def load_config(path: str | Path) -> Config:
     """从 JSON 加载配置；本函数是配置构造的唯一出口（DRY）。"""
     raw = json.loads(Path(path).read_text(encoding="utf-8"))
     cats = [CategoryCfg(**c) for c in raw["categories"]]
-    hist = raw.get("history_file") or str(Path(raw["download_root"]) / ".history.json")
+    root = Path(raw["download_root"])
+    hist = raw.get("history_file") or str(root / ".history.json")
+    uploaded = raw.get("uploaded_file") or str(root / ".uploaded.json")
     return Config(
-        download_root=Path(raw["download_root"]),
+        download_root=root,
         categories=cats,
         resolution=raw.get("resolution", "highest"),
         cookie=raw.get("cookie", ""),
         proxy=raw.get("proxy") or None,
         user_agent=raw.get("user_agent") or Config.user_agent,
         history_file=Path(hist),
+        uploaded_file=Path(uploaded),
+        pcloud=PCloudCfg(**{k: v for k, v in raw.get("pcloud", {}).items()
+                            if k in PCloudCfg.__dataclass_fields__}),
         request_timeout=raw.get("request_timeout", 30.0),
         download_timeout=raw.get("download_timeout", 600.0),
         max_retries=raw.get("max_retries", 3),
@@ -111,6 +134,8 @@ class Fetcher:
     def __init__(self, cfg: Config):
         self.cfg = cfg
         self.history = History(cfg.history_file)
+        self.uploaded = History(cfg.uploaded_file)
+        self.uploader = build_uploader(cfg.pcloud) if cfg.pcloud.enabled else None
         headers = {
             "User-Agent": cfg.user_agent,
             "Accept-Language": "en-US,en;q=0.9",
@@ -234,6 +259,41 @@ class Fetcher:
         name = re.sub(r'[\\/:*?"<>|\r\n\t]', "_", name).strip().strip(".")
         return name[:120] or "video"
 
+    # ---------- 步骤 5（可选）：上传 pCloud ----------
+    def _upload_one(self, local: Path, rel: str) -> bool:
+        """上传单个本地文件（rel=download_root 下相对路径）。失败留在本地等下轮补传。"""
+        if not self.uploader or self.uploaded.has(rel):
+            return False
+        size_mb = local.stat().st_size / 1048576
+        print(f"  [⇑] 上传 pCloud: {rel} ({size_mb:.1f} MiB)")
+        remote = self.uploader.upload(local, posixpath.dirname(rel))
+        self.uploaded.add(rel)
+        print(f"  [☁ ] 云端就绪: /{remote}")
+        if self.cfg.pcloud.delete_local_after_upload:
+            local.unlink(missing_ok=True)
+            d = local.parent
+            while d != self.cfg.download_root:
+                try:
+                    os.rmdir(d)  # 只有空目录才删得掉，非空直接报错跳过
+                except OSError:
+                    break
+                d = d.parent
+            print(f"  [C] 本地中转副本已删除")
+        return True
+
+    def upload_pending(self) -> int:
+        """扫描 download_root，把本地还在但云上没有的 mp4 全部补传到 pCloud。"""
+        if not self.uploader:
+            return 0
+        done = 0
+        for f in sorted(self.cfg.download_root.rglob("*.mp4")):
+            rel = f.relative_to(self.cfg.download_root).as_posix()
+            try:
+                done += self._upload_one(f, rel)
+            except Exception as e:
+                print(f"  [!] 上传失败 {rel}: {e}", file=sys.stderr)
+        return done
+
     # ---------- 主流程：处理一个分类 ----------
     def run_category(self, cat: CategoryCfg) -> int:
         print(f"[{cat.name}] 列出视频…")
@@ -264,9 +324,17 @@ class Fetcher:
                 print(f"  [✅] {out.name} ({size_mb:.1f} MiB)")
                 self.history.add(url)
                 downloaded += 1
+                try:
+                    self._upload_one(
+                        out, out.relative_to(self.cfg.download_root).as_posix()
+                    )
+                except Exception as e:
+                    print(f"  [!] 上传失败，文件留在本地下轮补传: {e}", file=sys.stderr)
             except Exception as e:
                 print(f"  [!] 失败 {url}: {e}", file=sys.stderr)
         return downloaded
 
     def close(self) -> None:
         self.client.close()
+        if self.uploader:
+            self.uploader.close()

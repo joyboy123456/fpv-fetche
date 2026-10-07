@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{ rel or "视频库" }}</title>
+<style>
+  * { box-sizing: border-box }
+  body { font-family: system-ui, -apple-system, sans-serif; background: #111; color: #eee;
+         max-width: 960px; margin: 0 auto; padding: 2em 1em }
+  h2 { margin: 0 0 .3em; font-size: 1.3em; word-break: break-all }
+  a { color: #8cf; text-decoration: none }
+  a:hover { text-decoration: underline }
+  .crumbs { color: #888; font-size: .9em; margin-bottom: 1.2em }
+  .crumbs a { color: #888 }
+  ul { padding: 0; margin: 0 }
+  li { list-style: none; margin: .55em 0; font-size: 1.05em; display: flex; gap: .5em; align-items: baseline }
+  li .name { word-break: break-all }
+  small { color: #888; white-space: nowrap }
+  .empty { color: #888; margin-top: 2em }
+</style>
+</head>
+<body>
+<h2>📂 /{{ rel }}</h2>
+{% if rel %}<p class="crumbs"><a href="/browse/{{ back }}">← 返回上级</a></p>{% endif %}
+<ul>
+{% for it in items %}
+  {% if it.is_folder %}
+  <li>📁 <a class="name" href="/browse/{{ it.url }}">{{ it.name }}/</a></li>
+  {% else %}
+  <li>🎬 <a class="name" href="/watch/{{ it.url }}">{{ it.name }}</a> <small>{{ it.size_mb }} MB</small></li>
+  {% endif %}
+{% endfor %}
+</ul>
+{% if not items %}<p class="empty">（空目录）</p>{% endif %}
+</body>
+</html>

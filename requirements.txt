@@ -1,5 +1,6 @@
 httpx[http2]>=0.27
 croniter>=2.0
+flask>=3.0
 fastapi>=0.115
 uvicorn>=0.32
 pydantic>=2.0
