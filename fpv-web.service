@@ -1,0 +1,18 @@
+[Unit]
+Description=FPV Web 片库（浏览器直出，不转码）
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/fpv-fetcher
+ExecStart=/opt/fpv-fetcher/.venv/bin/python -u -m web -c /opt/fpv-fetcher/config.json
+Restart=on-failure
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+# 1C1G：单进程即可。Range 直出几乎不占 CPU。
+MemoryMax=400M
+
+[Install]
+WantedBy=multi-user.target

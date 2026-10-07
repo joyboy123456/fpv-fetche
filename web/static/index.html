@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="dark">
+  <title>REEL · 片库</title>
+  <link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/static/app.css?v=2">
+</head>
+<body>
+  <a class="skip" href="#content">跳到片库</a>
+  <div id="app" v-cloak>
+    <section v-if="phase === 'login'" class="gate" aria-labelledby="gate-title">
+      <p class="brand-mark">REEL</p>
+      <h1 id="gate-title">放映口</h1>
+      <p class="lede">本地直出，浏览器播放。口令只留在这台机器上。</p>
+      <form @submit.prevent="login">
+        <label for="pw">口令</label>
+        <input
+          id="pw"
+          v-model="password"
+          type="password"
+          name="password"
+          autocomplete="current-password"
+          required
+          autofocus
+        >
+        <button type="submit" :disabled="busy">进入片库</button>
+        <p v-if="error" class="alert" role="alert">{{ error }}</p>
+      </form>
+    </section>
+
+    <div v-else class="shell">
+      <aside class="rail" aria-label="分类">
+        <p class="brand-mark">REEL</p>
+        <p class="rail-note">fpv · 直出</p>
+        <nav>
+          <ul>
+            <li>
+              <button
+                type="button"
+                :aria-pressed="category === ''"
+                :class="{ on: category === '' }"
+                @click="setCategory('')"
+              >
+                全部 <span>{{ totalAll }}</span>
+              </button>
+            </li>
+            <li v-for="c in categories" :key="c.name">
+              <button
+                type="button"
+                :aria-pressed="category === c.name"
+                :class="{ on: category === c.name }"
+                @click="setCategory(c.name)"
+              >
+                {{ c.name }} <span>{{ c.count }}</span>
+              </button>
+            </li>
+          </ul>
+        </nav>
+        <button v-if="authRequired" type="button" class="ghost" @click="logout">退出</button>
+      </aside>
+
+      <div class="stage">
+        <header class="mast">
+          <div>
+            <h1>片库</h1>
+            <p class="count">{{ visible.length }} 部 · 点开即播，服务器不转码</p>
+          </div>
+          <search>
+            <form role="search" @submit.prevent>
+              <label for="q">搜索片名</label>
+              <input
+                id="q"
+                v-model="query"
+                type="search"
+                name="q"
+                placeholder="搜标题或路径"
+                autocomplete="off"
+              >
+            </form>
+          </search>
+        </header>
+
+        <main id="content" tabindex="-1">
+          <p v-if="loadError" class="alert" role="alert">{{ loadError }}</p>
+          <p v-else-if="!visible.length" class="empty">片库还是空的。等抓取跑完，刷新就会出现。</p>
+          <section v-for="group in grouped" :key="group.date" class="day">
+            <h2>{{ group.date }}</h2>
+            <ul class="grid">
+              <li v-for="v in group.items" :key="v.relpath">
+                <article>
+                  <button type="button" class="card" @click="open(v)">
+                    <span class="poster">
+                      <img
+                        :src="thumbUrl(v)"
+                        alt=""
+                        width="480"
+                        height="270"
+                        loading="lazy"
+                        decoding="async"
+                        @error="onThumbError($event)"
+                      >
+                    </span>
+                    <span class="card-copy">
+                      <span class="kicker">{{ v.category }}<template v-if="v.resolution"> · {{ v.resolution }}p</template></span>
+                      <span class="card-title">{{ v.title }}</span>
+                      <span class="meta">{{ formatSize(v.size) }}</span>
+                    </span>
+                  </button>
+                </article>
+              </li>
+            </ul>
+          </section>
+        </main>
+      </div>
+    </div>
+
+    <dialog
+      ref="playerEl"
+      class="player"
+      closedby="any"
+      aria-labelledby="player-title"
+      @close="onPlayerClose"
+    >
+      <form method="dialog" class="player-bar">
+        <h2 id="player-title">{{ current ? current.title : "播放" }}</h2>
+        <button type="submit">关闭</button>
+      </form>
+      <video ref="videoEl" controls playsinline preload="none"></video>
+    </dialog>
+  </div>
+  <script src="/static/vendor/vue.global.prod.js"></script>
+  <script src="/static/app.js?v=2"></script>
+</body>
+</html>

@@ -16,6 +16,7 @@ __pycache__/
 
 # Local overrides
 config.local.json
+.reel-preview/
 
 # OS
 .DS_Store
